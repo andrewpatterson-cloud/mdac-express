@@ -1,11 +1,29 @@
 completion((async()=>{
-  const raw = await navigator.clipboard.readText();
-  if(!raw.startsWith('MDAC_EXPRESS_PAYLOAD=')){alert('No MDAC Express payload found. Go back to MDAC Express and tap Prepare MDAC first.');return 'No payload';}
-  const data = JSON.parse(raw.replace('MDAC_EXPRESS_PAYLOAD=',''));
-  const p=data.profile,t=data.trip,results=[];
-  const ev=id=>{const e=document.getElementById(id); if(e){e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}))}};
-  const set=(id,v)=>{const e=document.getElementById(id); if(!e)return results.push('⚠️ '+id),false; e.value=v||''; ev(id); results.push('✅ '+id); return true};
-  const choose=(id,w)=>{const e=document.getElementById(id); if(!e)return results.push('⚠️ '+id),false; const x=String(w||'').trim().toUpperCase(); for(const o of e.options){const v=String(o.value).trim().toUpperCase(), txt=String(o.textContent).trim().toUpperCase(); if(v===x||txt===x||txt.includes(x)){e.value=o.value; ev(id); results.push('✅ '+id); return true}} results.push('⚠️ '+id+' option '+x); return false};
-  set('name',(p.name||'').toUpperCase()); set('passNo',(p.passportNo||'').toUpperCase()); set('dob',p.dob); choose('nationality',p.nationality); choose('birthPlace',p.placeOfBirth); choose('placeBirth',p.placeOfBirth); choose('sex',p.sex); set('passExpDte',p.passportExpiry); set('email',p.email); set('confirmEmail',p.email); choose('region',p.phoneCountry); set('mobile',p.mobile); set('arrDt',t.arrivalDate); set('depDt',t.departureDate); set('vesselNm',(t.transportNo||'').toUpperCase()); choose('trvlMode',t.modeOfTravel); choose('embark',t.lastPort);
-  const accom=document.getElementById('formAccommodation'); if(accom)accom.style.display='block'; choose('accommodationStay',t.accommodationStay); set('accommodationAddress1',t.address1); set('accommodationAddress2',t.address2); choose('accommodationState',t.state); await new Promise(r=>setTimeout(r,1000)); choose('accommodationCity',t.city); set('accommodationPostcode',t.postcode); const cap=document.getElementById('captcha'); if(cap)cap.scrollIntoView({behavior:'smooth',block:'center'}); alert('MDAC Express filled what it could. Review before submitting.\n\n'+results.join('\n')+'\n\nSolve CAPTCHA manually.'); return results.join('\n');
+  const raw=await navigator.clipboard.readText();
+  if(!raw.startsWith('MDAC_EXPRESS:')){alert('No MDAC Express payload found. Prepare MDAC first.');return 'No payload';}
+  const data=JSON.parse(raw.replace('MDAC_EXPRESS:',''));
+  const p=data.profile,t=data.trip;
+  const set=(id,v)=>{const e=document.getElementById(id);if(!e)return false;e.value=v||'';e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));return true};
+  const choose=(id,w)=>{const e=document.getElementById(id);if(!e)return false;const target=String(w||'').trim().toUpperCase();for(const o of e.options){const val=String(o.value).trim().toUpperCase(),txt=String(o.textContent).trim().toUpperCase();if(val===target||txt===target||txt.includes(target)){e.value=o.value;e.dispatchEvent(new Event('change',{bubbles:true}));return true}}return false};
+  const done=[]; const mark=(x,ok)=>done.push((ok?'✅ ':'⚠️ ')+x);
+  mark('Name',set('name',(p.name||'').toUpperCase()));
+  mark('Passport',set('passNo',(p.passportNo||'').toUpperCase()));
+  mark('DOB',set('dob',p.dob));
+  mark('Nationality',choose('nationality',p.nationality));
+  mark('Place of birth',choose('placeOfBirth',p.placeOfBirth)||choose('pob',p.placeOfBirth));
+  mark('Sex',choose('sex',p.sex));
+  mark('Passport expiry',set('passExpDte',p.passportExpiry));
+  mark('Email',set('email',p.email)); mark('Confirm email',set('confirmEmail',p.email));
+  mark('Phone code',choose('region',p.phoneCountry)); mark('Mobile',set('mobile',p.mobile));
+  mark('Arrival',set('arrDt',t.arrivalDate)); mark('Departure',set('depDt',t.departureDate));
+  mark('Transport no',set('vesselNm',(t.transportNo||'').toUpperCase()));
+  mark('Mode',choose('trvlMode',t.modeOfTravel)); mark('Embark',choose('embark',t.lastPort));
+  const accom=document.getElementById('formAccommodation'); if(accom) accom.style.display='block';
+  mark('Accommodation',choose('accommodationStay',t.accommodationStay));
+  mark('Address 1',set('accommodationAddress1',t.address1)); mark('Address 2',set('accommodationAddress2',t.address2));
+  mark('State',choose('accommodationState',t.state)); await new Promise(r=>setTimeout(r,900));
+  mark('City',choose('accommodationCity',t.city)); mark('Postcode',set('accommodationPostcode',t.postcode));
+  document.getElementById('captcha')?.scrollIntoView({behavior:'smooth',block:'center'});
+  alert('MDAC autofill attempted. Review everything, solve CAPTCHA, then submit.\n\n'+done.join('\n'));
+  return done.join('\n');
 })());
