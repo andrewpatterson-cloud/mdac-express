@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MDAC Express</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+  <main class="app">
+    <h1>🇲🇾 MDAC Express</h1>
+    <p class="hint">Stores your profile locally on this phone. Nothing is sent to a server.</p>
+
+    <section class="card">
+      <h2>1. Profile</h2>
+      <label>Full name as in passport<input id="name" autocomplete="name"></label>
+      <label>Passport no.<input id="passNo" autocapitalize="characters"></label>
+      <label>Date of birth, DD/MM/YYYY<input id="dob" placeholder="01/01/1970"></label>
+      <label>Nationality code<input id="nationality" placeholder="USA"></label>
+      <label>Place of birth code<input id="placeOfBirth" placeholder="USA"></label>
+      <label>Sex<select id="sex"><option value="M">Male</option><option value="F">Female</option></select></label>
+      <label>Passport expiry, DD/MM/YYYY<input id="passportExpiry" placeholder="01/01/2030"></label>
+      <label>Email<input id="email" type="email"></label>
+      <label>Phone country/region code<input id="phoneCountry" placeholder="SGP"></label>
+      <label>Mobile no.<input id="mobile" inputmode="numeric"></label>
+      <button id="saveProfile">Save profile</button>
+    </section>
+
+    <section class="card">
+      <h2>2. Trip defaults</h2>
+      <label>Trip type<select id="tripType"><option value="overnight">Overnight, depart tomorrow</option><option value="day">Day trip, depart today</option><option value="custom">Custom dates</option></select></label>
+      <label>Mode of travel<select id="modeOfTravel"><option value="LAND">Land</option><option value="AIR">Air</option><option value="SEA">Sea</option></select></label>
+      <label>Transport no.<input id="transportNo" placeholder="Car plate / flight / ferry"></label>
+      <label>Last port before Malaysia<input id="lastPort" value="SGP"></label>
+      <label>Accommodation type<input id="accommodationStay" value="OTHERS"></label>
+      <label>Address line 1<input id="address1" value="106 JALAN WONG AH FOOK"></label>
+      <label>Address line 2<input id="address2" value="JOHOR BAHRU CITY SQUARE"></label>
+      <label>State<input id="state" value="JOHOR"></label>
+      <label>City<input id="city" value="JOHOR BAHRU"></label>
+      <label>Postcode<input id="postcode" value="80000" inputmode="numeric"></label>
+      <div id="customDates" hidden>
+        <label>Arrival date, DD/MM/YYYY<input id="arrivalDate"></label>
+        <label>Departure date, DD/MM/YYYY<input id="departureDate"></label>
+      </div>
+      <button id="saveTrip">Save trip defaults</button>
+    </section>
+
+    <section class="card">
+      <h2>3. Use it</h2>
+      <button id="copyPayload">Copy autofill payload</button>
+      <a class="button" href="https://imigresen-online.imi.gov.my/mdac/main?registerMain" target="_blank" rel="noopener">Open official MDAC</a>
+      <p class="hint">Then on the MDAC page: Share → Fill MDAC Shortcut. The Shortcut reads the copied payload and fills the form.</p>
+    </section>
+  </main>
+  <script src="js/app.js"></script>
+</body>
+</html>
