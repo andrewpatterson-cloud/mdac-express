@@ -24,8 +24,8 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 
 const tripTypes = [
-  { title: 'Weekend Johor', icon: CarFront, accent: '#0f766e', emoji: '🚗' },
-  { title: 'Same-day Johor', icon: CarFront, accent: '#2563eb', emoji: '🚗' },
+  { title: 'Weekend Trip', icon: CarFront, accent: '#0f766e', emoji: '🚗' },
+  { title: 'Same-day Trip', icon: CarFront, accent: '#2563eb', emoji: '🚗' },
   { title: 'Flight', icon: Plane, accent: '#7c3aed', emoji: '✈️' },
   { title: 'Bus', icon: Bus, accent: '#ea580c', emoji: '🚌' },
   { title: 'Train', icon: TrainFront, accent: '#0891b2', emoji: '🚆' },
@@ -54,15 +54,15 @@ const APP_URL = 'https://andrewpatterson-cloud.github.io/mdac-express/';
 const initialTraveller = {
   id: 'traveller-1',
   name: 'Andrew Patterson',
-  passportNumber: 'US1234567',
-  dateOfBirth: '1988-05-10',
+  passportNumber: '',
+  dateOfBirth: '',
   nationality: 'United States',
-  placeOfBirth: 'New York',
-  sex: 'Male',
-  passportExpiry: '2030-01-01',
-  email: 'andrew@example.com',
+  placeOfBirth: '',
+  sex: '',
+  passportExpiry: '',
+  email: '',
   phoneCountryCode: '+1',
-  mobile: '5551234567',
+  mobile: '',
 };
 
 const loadStored = (key, fallback) => {
@@ -93,51 +93,46 @@ const getPassportLabel = (traveller) => {
   return `${flag} ${traveller.nationality} Passport`;
 };
 
-const getTripDefaults = (tripTitle) => {
+const getTripDefaults = (tripTitle, previousTrip = null) => {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
   const base = {
-    arrivalDate: toInputDate(today),
-    departureDate: toInputDate(today),
-    transportNumber: '',
-    tripLength: 'Overnight',
-    lastPort: 'Singapore',
+    arrivalDate: previousTrip?.arrivalDate || toInputDate(today),
+    departureDate: previousTrip?.departureDate || toInputDate(today),
+    transportNumber: previousTrip?.transportNumber || '',
+    tripLength: previousTrip?.tripLength || 'Overnight',
+    lastPort: previousTrip?.lastPort || 'Singapore',
     modeOfTravel: 'Custom',
+    address1: previousTrip?.address1 || '',
+    address2: previousTrip?.address2 || '',
+    state: previousTrip?.state || '',
+    city: previousTrip?.city || '',
+    postcode: previousTrip?.postcode || '',
   };
 
-  if (tripTitle === 'Weekend Johor') {
+  if (tripTitle === 'Weekend Trip') {
     return {
       ...base,
-      departureDate: toInputDate(tomorrow),
-      tripLength: 'Overnight',
+      departureDate: previousTrip?.departureDate || toInputDate(tomorrow),
+      tripLength: previousTrip?.tripLength || 'Overnight',
       modeOfTravel: 'Land',
-      address1: '106 JALAN WONG AH FOOK',
-      address2: 'JOHOR BAHRU CITY SQUARE',
-      state: 'JOHOR',
-      city: 'JOHOR BAHRU',
-      postcode: '80000',
     };
   }
 
-  if (tripTitle === 'Same-day Johor') {
+  if (tripTitle === 'Same-day Trip') {
     return {
       ...base,
-      tripLength: 'Same day',
+      tripLength: previousTrip?.tripLength || 'Same day',
       modeOfTravel: 'Land',
-      address1: '106 JALAN WONG AH FOOK',
-      address2: 'JOHOR BAHRU CITY SQUARE',
-      state: 'JOHOR',
-      city: 'JOHOR BAHRU',
-      postcode: '80000',
     };
   }
 
-  if (tripTitle === 'Flight') return { ...base, modeOfTravel: 'Air', departureDate: toInputDate(tomorrow) };
+  if (tripTitle === 'Flight') return { ...base, modeOfTravel: 'Air', departureDate: previousTrip?.departureDate || toInputDate(tomorrow) };
   if (tripTitle === 'Bus') return { ...base, modeOfTravel: 'Bus' };
-  if (tripTitle === 'Train') return { ...base, modeOfTravel: 'Train' };
-  if (tripTitle === 'Ferry') return { ...base, modeOfTravel: 'Ferry' };
+  if (tripTitle === 'Train') return { ...base, modeOfTravel: 'Rail' };
+  if (tripTitle === 'Ferry') return { ...base, modeOfTravel: 'Sea' };
   return { ...base, modeOfTravel: 'Custom' };
 };
 
@@ -161,7 +156,10 @@ export default function MDACPage() {
   const [travellers, setTravellers] = useState(() => loadStored('mdac-travellers', [initialTraveller]));
   const [defaultTravellerId, setDefaultTravellerId] = useState(() => loadStored('mdac-default-traveller', initialTraveller.id));
   const [selectedTrip, setSelectedTrip] = useState(null);
-  const [tripForm, setTripForm] = useState(() => getTripDefaults('Weekend Johor'));
+  const [tripForm, setTripForm] = useState(() => {
+    const savedTrip = loadStored('mdac-last-trip-details', null);
+    return getTripDefaults('Weekend Trip', savedTrip);
+  });
   const [wizardStep, setWizardStep] = useState(0);
   const [travellerForm, setTravellerForm] = useState({ ...initialTraveller, id: crypto.randomUUID ? crypto.randomUUID() : `traveller-${Date.now()}` });
   const [showTravellerForm, setShowTravellerForm] = useState(false);
@@ -197,6 +195,12 @@ export default function MDACPage() {
   }, [preparedPayloads]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('mdac-last-trip-details', JSON.stringify(tripForm));
+    }
+  }, [tripForm]);
+
+  useEffect(() => {
     const onResize = () => setIsDesktop(window.innerWidth >= 900);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
@@ -206,7 +210,7 @@ export default function MDACPage() {
     return travellers.find((traveller) => traveller.id === defaultTravellerId) || travellers[0] || null;
   }, [travellers, defaultTravellerId]);
 
-  const isJohorTrip = selectedTrip && ['Weekend Johor', 'Same-day Johor'].includes(selectedTrip.title);
+  const isDestinationTrip = selectedTrip && ['Weekend Trip', 'Same-day Trip'].includes(selectedTrip.title);
 
   const validationIssues = useMemo(() => {
     const issues = [];
@@ -230,20 +234,20 @@ export default function MDACPage() {
 
     if (arrivalDate && arrivalDate < today) issues.push('Arrival date cannot be in the past');
     if (arrivalDate && departureDate && departureDate < arrivalDate) issues.push('Departure date cannot be before arrival');
-    if (!['Weekend Johor', 'Same-day Johor', 'Custom'].includes(selectedTrip?.title || '') && !tripForm.transportNumber?.trim()) {
+    if (!['Weekend Trip', 'Same-day Trip', 'Custom'].includes(selectedTrip?.title || '') && !tripForm.transportNumber?.trim()) {
       issues.push('Transport number is required');
     }
 
-    if (isJohorTrip) {
-      if (!tripForm.address1?.trim()) issues.push('Johor address line 1 is required');
-      if (!tripForm.address2?.trim()) issues.push('Johor address line 2 is required');
-      if (!tripForm.state?.trim()) issues.push('Johor state is required');
-      if (!tripForm.city?.trim()) issues.push('Johor city is required');
-      if (!tripForm.postcode?.trim()) issues.push('Johor postcode is required');
+    if (isDestinationTrip) {
+      if (!tripForm.address1?.trim()) issues.push('Destination address line 1 is required');
+      if (!tripForm.address2?.trim()) issues.push('Destination address line 2 is required');
+      if (!tripForm.state?.trim()) issues.push('Destination state is required');
+      if (!tripForm.city?.trim()) issues.push('Destination city is required');
+      if (!tripForm.postcode?.trim()) issues.push('Destination postcode is required');
     }
 
     return issues;
-  }, [defaultTraveller, tripForm, isJohorTrip]);
+  }, [defaultTraveller, tripForm, isDestinationTrip]);
 
   const passportWarning = useMemo(() => {
     if (!defaultTraveller?.passportExpiry) return false;
@@ -263,7 +267,7 @@ export default function MDACPage() {
 
   const handleSelectTrip = (trip) => {
     setSelectedTrip(trip);
-    setTripForm(getTripDefaults(trip.title));
+    setTripForm(getTripDefaults(trip.title, tripForm));
     setWizardStep(0);
     setAutofillMessage('');
     setDetailsPrepared(false);
@@ -323,7 +327,7 @@ export default function MDACPage() {
 
   const handleRestart = () => {
     setSelectedTrip(null);
-    setTripForm(getTripDefaults('Weekend Johor'));
+    setTripForm(getTripDefaults('Weekend Trip'));
     setWizardStep(0);
     setAutofillMessage('');
     setDetailsPrepared(false);
@@ -438,15 +442,17 @@ export default function MDACPage() {
       { label: 'Traveller', done: travellerReady },
       { label: 'Trip', done: tripReady },
       { label: 'Validation', done: validationReady },
-      { label: 'Details prepared', done: detailsPrepared },
+      { label: 'MDAC prepared', done: detailsPrepared },
+      { label: 'Install Shortcut', done: shortcutRun },
       { label: 'Open MDAC', done: mdacOpened },
       { label: 'Run Shortcut', done: shortcutRun },
+      { label: 'Complete CAPTCHA', done: submitComplete },
       { label: 'Submit', done: submitComplete },
     ];
 
     return (
       <>
-        <section style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fcfdff 100%)', borderRadius: '24px', padding: '12px 14px 14px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)', border: '1px solid #e5e7eb', position: 'relative', overflow: 'hidden' }}>
+        <section style={{ background: 'linear-gradient(135deg, #ffffff 0%, #fcfdff 100%)', borderRadius: '24px', padding: '10px 12px 12px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.08)', border: '1px solid #e5e7eb', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(220,38,38,0.08) 0%, rgba(37,99,235,0.06) 50%, rgba(250,204,21,0.08) 100%)', pointerEvents: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', position: 'relative', zIndex: 1 }}>
             <div style={{ width: '38px', height: '38px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(15, 23, 42, 0.12)', background: '#fff', fontSize: '22px' }}>🇲🇾</div>
@@ -516,20 +522,20 @@ export default function MDACPage() {
         </section>
 
         <section style={{ padding: '2px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <div style={{ fontSize: '13px', color: '#374151', fontWeight: 700 }}>Progress</div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: '6px' }}>
+          <div style={{ display: 'grid', gap: '8px' }}>
             {wizardSteps.map((step, index) => {
               const isComplete = index < wizardStep;
               const isActive = index === wizardStep;
               const isFuture = index > wizardStep;
               return (
-                <div key={step} style={{ padding: '8px 4px', borderRadius: '12px', background: isComplete ? '#f0fdf4' : isActive ? '#eff6ff' : '#f3f4f6', border: isActive ? '1px solid #bfdbfe' : isComplete ? '1px solid #bbf7d0' : '1px solid #e5e7eb', minHeight: '58px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                  <div style={{ color: isComplete ? '#166534' : isActive ? '#2563eb' : isFuture ? '#9ca3af' : '#6b7280' }}>
-                    {isComplete ? <CheckCircle2 size={14} /> : <span style={{ fontSize: '12px', fontWeight: 800 }}>{index + 1}</span>}
+                <div key={step} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', borderRadius: '12px', background: isComplete ? '#f0fdf4' : isActive ? '#eff6ff' : '#f3f4f6', border: isActive ? '1px solid #bfdbfe' : isComplete ? '1px solid #bbf7d0' : '1px solid #e5e7eb' }}>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '999px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isComplete ? '#166534' : isActive ? '#2563eb' : '#e5e7eb', color: isComplete || isActive ? '#fff' : '#9ca3af' }}>
+                    {isComplete ? <CheckCircle2 size={14} /> : <span style={{ fontSize: '11px', fontWeight: 800 }}>{index + 1}</span>}
                   </div>
-                  <div style={{ fontSize: '10px', color: isComplete ? '#166534' : isActive ? '#2563eb' : isFuture ? '#9ca3af' : '#6b7280', fontWeight: 700, textAlign: 'center', lineHeight: 1.2 }}>{step}</div>
+                  <div style={{ fontSize: '12px', color: isComplete ? '#166534' : isActive ? '#2563eb' : isFuture ? '#9ca3af' : '#6b7280', fontWeight: 700 }}>{step}</div>
                 </div>
               );
             })}
@@ -568,7 +574,7 @@ export default function MDACPage() {
                     <input type="date" value={tripForm.departureDate} onChange={(event) => setTripForm((current) => ({ ...current, departureDate: event.target.value }))} style={{ width: '100%', marginTop: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px 10px', fontSize: '13px' }} />
                   </label>
                 </div>
-                {['Weekend Johor', 'Same-day Johor'].includes(selectedTrip.title) ? (
+                {['Weekend Trip', 'Same-day Trip'].includes(selectedTrip.title) ? (
                   <label style={{ fontSize: '12px', color: '#374151', fontWeight: 700 }}>
                     Trip length
                     <select value={tripForm.tripLength} onChange={(event) => setTripForm((current) => ({ ...current, tripLength: event.target.value }))} style={{ width: '100%', marginTop: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px 10px', fontSize: '13px' }}>
@@ -607,10 +613,10 @@ export default function MDACPage() {
                     </ul>
                   </div>
                 )}
-                {isJohorTrip ? (
+                {isDestinationTrip ? (
                   <div style={{ display: 'grid', gap: '8px' }}>
-                    <label style={{ fontSize: '12px', color: '#374151', fontWeight: 700 }}>Address 1<input value={tripForm.address1} onChange={(event) => setTripForm((current) => ({ ...current, address1: event.target.value }))} style={{ width: '100%', marginTop: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px 10px', fontSize: '13px' }} /></label>
-                    <label style={{ fontSize: '12px', color: '#374151', fontWeight: 700 }}>Address 2<input value={tripForm.address2} onChange={(event) => setTripForm((current) => ({ ...current, address2: event.target.value }))} style={{ width: '100%', marginTop: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px 10px', fontSize: '13px' }} /></label>
+                    <label style={{ fontSize: '12px', color: '#374151', fontWeight: 700 }}>Destination address line 1<input value={tripForm.address1} onChange={(event) => setTripForm((current) => ({ ...current, address1: event.target.value }))} style={{ width: '100%', marginTop: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px 10px', fontSize: '13px' }} /></label>
+                    <label style={{ fontSize: '12px', color: '#374151', fontWeight: 700 }}>Destination address line 2<input value={tripForm.address2} onChange={(event) => setTripForm((current) => ({ ...current, address2: event.target.value }))} style={{ width: '100%', marginTop: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px 10px', fontSize: '13px' }} /></label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       <label style={{ fontSize: '12px', color: '#374151', fontWeight: 700 }}>State<input value={tripForm.state} onChange={(event) => setTripForm((current) => ({ ...current, state: event.target.value }))} style={{ width: '100%', marginTop: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px 10px', fontSize: '13px' }} /></label>
                       <label style={{ fontSize: '12px', color: '#374151', fontWeight: 700 }}>City<input value={tripForm.city} onChange={(event) => setTripForm((current) => ({ ...current, city: event.target.value }))} style={{ width: '100%', marginTop: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '8px 10px', fontSize: '13px' }} /></label>
@@ -628,9 +634,9 @@ export default function MDACPage() {
                   <div style={{ marginTop: '8px', fontSize: '13px', lineHeight: 1.5 }}>
                     <div style={{ fontWeight: 700, marginBottom: '6px' }}>Next:</div>
                     <ol style={{ margin: '0 0 0 16px', padding: 0, display: 'grid', gap: '4px' }}>
-                      <li>Open the official Malaysia Digital Arrival Card website.</li>
-                      <li>Tap the Safari Share button.</li>
-                      <li>Choose “Fill MDAC”.</li>
+                      <li>Open the official MDAC website.</li>
+                      <li>Tap Safari's Share button.</li>
+                      <li>Choose Fill MDAC.</li>
                       <li>Review the completed form.</li>
                       <li>Complete the CAPTCHA.</li>
                       <li>Submit.</li>
@@ -640,6 +646,7 @@ export default function MDACPage() {
                 <button type="button" onClick={handleOpenMdac} style={{ border: 'none', borderRadius: '14px', padding: '12px 14px', background: '#0f6fff', color: 'white', fontWeight: 700, fontSize: '15px' }}>
                   Open Official MDAC
                 </button>
+                <div style={{ fontSize: '12px', color: '#374151', lineHeight: 1.5 }}>Opens the official Malaysia Digital Arrival Card website in Safari, where the Fill MDAC Shortcut completes the form.</div>
               </div>
             ) : null}
 
@@ -845,7 +852,7 @@ Your information remains on this device until you clear your browser data, use t
         <div style={{ display: 'grid', gap: '10px' }}>
           <div style={{ padding: '12px', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e5e7eb' }}>
             <div style={{ fontWeight: 700, color: '#111827', marginBottom: '6px' }}>Trip defaults</div>
-            <div style={{ fontSize: '13px', color: '#374151' }}>Weekend Johor uses today → tomorrow, Land, Singapore, and Johor address defaults.</div>
+            <div style={{ fontSize: '13px', color: '#374151' }}>Weekend Trip uses a next-day departure, land travel, and your destination address details.</div>
           </div>
           <div style={{ padding: '12px', borderRadius: '16px', background: '#f8fafc', border: '1px solid #e5e7eb' }}>
             <div style={{ fontWeight: 700, color: '#111827', marginBottom: '6px' }}>Supported devices and browsers</div>
